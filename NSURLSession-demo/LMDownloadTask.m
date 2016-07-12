@@ -57,6 +57,7 @@ NSString * const BackGroundConfigure = @"com.LMDownloadSessionManager.background
     if (self = [super init]) {
         _backgroundConfigure = BackGroundConfigure;
         _maxDownloadCount = 1;
+        [self backgroundConfigure];
     }
     return self;
 }
@@ -200,6 +201,13 @@ NSString * const BackGroundConfigure = @"com.LMDownloadSessionManager.background
     [self deleteFileIfExist:downloadModel.filePath];
 }
 
+- (void)configureBackroundSession {
+    
+    if (!_backgroundConfigure) {
+        return;
+    }
+    [self session];
+}
 #pragma mark - configire background task
 
 // 配置后台后台下载session
@@ -305,6 +313,7 @@ NSString * const BackGroundConfigure = @"com.LMDownloadSessionManager.background
     return _downloadingModelDic;
 }
 
+//
 - (NSMutableArray *)waitingDownloadModels
 {
     if (!_waitingDownloadModels) {
@@ -313,6 +322,7 @@ NSString * const BackGroundConfigure = @"com.LMDownloadSessionManager.background
     return _waitingDownloadModels;
 }
 
+// 或者缓存路径
 - (NSMutableArray *)downloadingModels
 {
     if (!_downloadingModels) {
@@ -330,6 +340,7 @@ NSString * const BackGroundConfigure = @"com.LMDownloadSessionManager.background
     }
 }
 
+// 移动文件
 - (void)moveFileAtURL:(NSURL *)srcURL toPath:(NSString *)dstPath
 {
     NSError *error = nil;
@@ -347,6 +358,7 @@ NSString * const BackGroundConfigure = @"com.LMDownloadSessionManager.background
     }
 }
 
+// 删除文件
 - (void)deleteFileIfExist:(NSString *)filePath
 {
     if ([self.fileManager fileExistsAtPath:filePath] ) {
@@ -360,6 +372,7 @@ NSString * const BackGroundConfigure = @"com.LMDownloadSessionManager.background
 
 #pragma mark - private
 
+// 状态更新
 - (void)downloadModel:(LMDownloadModel *)downloadModel didChangeState:(LMDownloadOperationState)state filePath:(NSString *)filePath error:(NSError *)error
 {
     if (_delegate && [_delegate respondsToSelector:@selector(downloadModel:didChangeState:filePath:error:)]) {
@@ -371,6 +384,7 @@ NSString * const BackGroundConfigure = @"com.LMDownloadSessionManager.background
     }
 }
 
+// 进度更新
 - (void)downloadModel:(LMDownloadModel *)downloadModel updateProgress:(LMDownloadProgress *)progress
 {
     if (_delegate && [_delegate respondsToSelector:@selector(downloadModel:didUpdateProgress:)]) {
@@ -403,7 +417,7 @@ NSString * const BackGroundConfigure = @"com.LMDownloadSessionManager.background
     return nil;
 }
 
-// resumeData 路径
+// resumeData,采用md5格式保存
 - (NSString *)resumeDataPathWithDownloadURL:(NSString *)downloadURL
 {
    // NSString *resumeFileName = [NSString md5:downloadURL];
@@ -422,7 +436,7 @@ NSString * const BackGroundConfigure = @"com.LMDownloadSessionManager.background
     }
 }
 
-// 检验是否可以恢复下载
+// 检验是否可以恢复下载，如果队列中没有任务则添加，有任务则删除
 - (BOOL)canResumeDownlaodModel:(LMDownloadModel *)downloadModel
 {
     @synchronized (self) {
@@ -562,6 +576,7 @@ didCompleteWithError:(nullable NSError *)error {
  totalBytesWritten:(int64_t)totalBytesWritten
 totalBytesExpectedToWrite:(int64_t)totalBytesExpectedToWrite {
     
+    NSLog(@"%@", [NSThread currentThread]);
     LMDownloadModel *downloadModel = [self downLoadingModelForURLString:downloadTask.taskDescription];
     if (!downloadModel || downloadModel.state == LMDownloadOperationPausedState) {
         return;

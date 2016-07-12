@@ -7,6 +7,7 @@
 //
 
 #import "AppDelegate.h"
+#import "LMDownloadTask.h"
 
 @interface AppDelegate ()
 

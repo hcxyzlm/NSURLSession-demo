@@ -50,13 +50,13 @@ static NSString * const downloadUrl = @"http://dlsw.baidu.com/sw-search-sp/soft/
         }
     }];
 }
-- (IBAction)暂停:(id)sender {
+- (IBAction)pauseDownLoad:(id)sender {
     _downloadModel = [[LMDownloadTask shareDonwLoadTask] downLoadingModelForURLString:downloadUrl];
     if (_downloadModel) {
         [[LMDownloadTask shareDonwLoadTask] suspendWithDownloadModel:_downloadModel];
     }
 }
-- (IBAction)删除下载:(id)sender {
+- (IBAction)deleteDownLoad:(id)sender {
     _downloadModel = [[LMDownloadTask shareDonwLoadTask] downLoadingModelForURLString:downloadUrl];
     if (_downloadModel) {
         [[LMDownloadTask shareDonwLoadTask] deleteFileWithDownloadModel:_downloadModel];

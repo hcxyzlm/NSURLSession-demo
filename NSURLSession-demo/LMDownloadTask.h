@@ -45,4 +45,6 @@
 - (void)deleteFileWithDownloadModel:(LMDownloadModel *)downloadModel;
 // 获取下载模型
 - (LMDownloadModel *)downLoadingModelForURLString:(NSString *)URLString;
+// 配置后台下载
+- (void)configureBackroundSession;
 @end
