@@ -45,7 +45,7 @@
 - (NSString *)downloadDirectory
 {
     if (!_downloadDirectory) {
-        _downloadDirectory = [[NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES) lastObject] stringByAppendingPathComponent:@"DownloadCache"];
+        _downloadDirectory = [[NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) firstObject] stringByAppendingPathComponent:@"newdownload"];
     }
     return _downloadDirectory;
 }

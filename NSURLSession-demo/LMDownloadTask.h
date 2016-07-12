@@ -37,6 +37,12 @@
 
 // 暂停下载
 - (void)suspendWithDownloadModel:(LMDownloadModel *)downloadModel;
+
+// 取消下载
+- (void)cancleWithDownloadModel:(LMDownloadModel *)downloadModel;
+
+// 删除下载
+- (void)deleteFileWithDownloadModel:(LMDownloadModel *)downloadModel;
 // 获取下载模型
 - (LMDownloadModel *)downLoadingModelForURLString:(NSString *)URLString;
 @end

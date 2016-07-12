@@ -181,6 +181,25 @@ NSString * const BackGroundConfigure = @"com.LMDownloadSessionManager.background
     }
 }
 
+//取消下载
+- (void)cancleWithDownloadModel:(LMDownloadModel *)downloadModel
+{
+    if (downloadModel.state != LMDownloadOperationFinishedState && downloadModel.state != LMDownloadOperationErrorState){
+        [self cancleWithDownloadModel:downloadModel clearResumeData:NO];
+    }
+}
+
+// 删除下载
+- (void)deleteFileWithDownloadModel:(LMDownloadModel *)downloadModel
+{
+    if (!downloadModel || !downloadModel.filePath) {
+        return;
+    }
+    
+    [self cancleWithDownloadModel:downloadModel clearResumeData:YES];
+    [self deleteFileIfExist:downloadModel.filePath];
+}
+
 #pragma mark - configire background task
 
 // 配置后台后台下载session
@@ -214,7 +233,7 @@ NSString * const BackGroundConfigure = @"com.LMDownloadSessionManager.background
     return nil;
 }
 
-// 获取所以的后台下载session
+// 获取配置的后台下载session
 - (NSArray *)sessionDownloadTasks
 {
     __block NSArray *tasks = nil;
@@ -271,8 +290,9 @@ NSString * const BackGroundConfigure = @"com.LMDownloadSessionManager.background
 - (NSString *)downloadDirectory
 {
     if (!_downloadDirectory) {
-        _downloadDirectory = [[NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES) lastObject] stringByAppendingPathComponent:@"newdownload"];
+        _downloadDirectory = [[NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES) lastObject] stringByAppendingPathComponent:@"cacheDownLoad"];
         [self createDirectory:_downloadDirectory];
+        NSLog(@"%s, download dic = %@", __func__,_downloadDirectory);
     }
     return _downloadDirectory;
 }
@@ -342,9 +362,9 @@ NSString * const BackGroundConfigure = @"com.LMDownloadSessionManager.background
 
 - (void)downloadModel:(LMDownloadModel *)downloadModel didChangeState:(LMDownloadOperationState)state filePath:(NSString *)filePath error:(NSError *)error
 {
-//    if (_delegate && [_delegate respondsToSelector:@selector(downloadModel:didChangeState:filePath:error:)]) {
-//        [_delegate downloadModel:downloadModel didChangeState:state filePath:filePath error:error];
-//    }
+    if (_delegate && [_delegate respondsToSelector:@selector(downloadModel:didChangeState:filePath:error:)]) {
+        [_delegate downloadModel:downloadModel didChangeState:state filePath:filePath error:error];
+    }
     
     if (downloadModel.stateBlock) {
         downloadModel.stateBlock(state,filePath,error);
@@ -353,9 +373,9 @@ NSString * const BackGroundConfigure = @"com.LMDownloadSessionManager.background
 
 - (void)downloadModel:(LMDownloadModel *)downloadModel updateProgress:(LMDownloadProgress *)progress
 {
-//    if (_delegate && [_delegate respondsToSelector:@selector(downloadModel:didUpdateProgress:)]) {
-//        [_delegate downloadModel:downloadModel didUpdateProgress:progress];
-//    }
+    if (_delegate && [_delegate respondsToSelector:@selector(downloadModel:didUpdateProgress:)]) {
+        [_delegate downloadModel:downloadModel didUpdateProgress:progress];
+    }
     
     if (downloadModel.progressBlock) {
         downloadModel.progressBlock(progress);
@@ -386,8 +406,8 @@ NSString * const BackGroundConfigure = @"com.LMDownloadSessionManager.background
 // resumeData 路径
 - (NSString *)resumeDataPathWithDownloadURL:(NSString *)downloadURL
 {
-    NSString *resumeFileName = [NSString md5:downloadURL];
-    return [self.downloadDirectory stringByAppendingPathComponent:resumeFileName];
+   // NSString *resumeFileName = [NSString md5:downloadURL];
+    return [self.downloadDirectory stringByAppendingPathComponent:downloadURL.lastPathComponent];
 }
 
 // 用于保存下载可以恢复下载
@@ -455,6 +475,7 @@ didFinishDownloadingToURL:(NSURL *)location {
         // 移动文件到下载目录
         [self createDirectory:downloadModel.downloadDirectory];
         [self moveFileAtURL:location toPath:downloadModel.filePath];
+        NSLog(@"%@", downloadModel.downloadDirectory);
     }
 
     
@@ -540,10 +561,8 @@ didCompleteWithError:(nullable NSError *)error {
       didWriteData:(int64_t)bytesWritten
  totalBytesWritten:(int64_t)totalBytesWritten
 totalBytesExpectedToWrite:(int64_t)totalBytesExpectedToWrite {
-    NSLog(@"%s", __func__);
     
     LMDownloadModel *downloadModel = [self downLoadingModelForURLString:downloadTask.taskDescription];
-    
     if (!downloadModel || downloadModel.state == LMDownloadOperationPausedState) {
         return;
     }

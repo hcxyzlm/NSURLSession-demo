@@ -75,6 +75,13 @@
                                     <action selector="暂停:" destination="BYZ-38-t0r" eventType="touchUpInside" id="Nfm-oi-jkL"/>
                                 </connections>
                             </button>
+                            <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="4wU-9I-eNn">
+                                <rect key="frame" x="130" y="288" width="60" height="30"/>
+                                <state key="normal" title="删除下载"/>
+                                <connections>
+                                    <action selector="删除下载:" destination="BYZ-38-t0r" eventType="touchUpInside" id="nmv-2U-rAJ"/>
+                                </connections>
+                            </button>
                         </subviews>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="calibratedWhite"/>
                         <constraints>
