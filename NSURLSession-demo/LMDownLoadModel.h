@@ -29,7 +29,7 @@ typedef void (^LMDownloadStateBlock)(LMDownloadOperationState state,NSString *fi
 // 下载模型类
 @interface LMDownloadModel : NSObject
 /** 下载地址RUL*/
-@property (nonatomic, strong, readonly) NSString *downloadURL;
+@property (nonatomic, strong) NSString *downloadURL;
 /** 文件名*/
 @property (nonatomic, strong) NSString *fileName;
 /** 下载目录，缓存目录*/
@@ -40,11 +40,16 @@ typedef void (^LMDownloadStateBlock)(LMDownloadOperationState state,NSString *fi
 @property (nonatomic, strong) NSURLSessionTask *task;
 /** 下载路径 */
 @property (nonatomic, strong) NSString *filePath;
+/** 断点续传的恢复数据*/
+@property (nonatomic, strong) NSData *resumeData;
+// 手动暂停
+@property (nonatomic, assign) BOOL manualCancle;
+
 /** 进度*/
 @property (nonatomic, strong) LMDownloadProgress *progress;
 // block
-@property (nonatomic, weak) LMDownloadProgressBlock progressBlock;
-@property (nonatomic, weak) LMDownloadStateBlock stateBlock;
+@property (nonatomic, copy) LMDownloadProgressBlock progressBlock;
+@property (nonatomic, copy) LMDownloadStateBlock stateBlock;
 
 /**
  *  初始化方法

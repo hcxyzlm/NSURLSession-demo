@@ -16,6 +16,6 @@
 - (void)downloadModel:(LMDownloadModel *)downloadModel didUpdateProgress:(LMDownloadProgress *)progress;
 
 // 更新下载状态
-- (void)downloadModel:(LMDownloadModel *)downloadModel didChangeState:(LMDownloadState)state filePath:(NSString *)filePath error:(NSError *)error;
+- (void)downloadModel:(LMDownloadModel *)downloadModel didChangeState:(LMDownloadOperationState)state filePath:(NSString *)filePath error:(NSError *)error;
 
 @end

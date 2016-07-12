@@ -10,6 +10,14 @@
 
 @implementation LMDownloadModel
 
+- (instancetype)init
+{
+    self = [super init];
+    if (self) {
+        _progress = [[LMDownloadProgress alloc] init];
+    }
+    return self;
+}
 - (instancetype)initWithURLString:(NSString *)URLString
 {
     return [self initWithURLString:URLString filePath:nil];
@@ -49,5 +57,9 @@
     }
     return _filePath;
 }
+
+@end
+
+@implementation LMDownloadProgress
 
 @end

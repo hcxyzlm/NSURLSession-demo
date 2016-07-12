@@ -8,6 +8,7 @@
 
 #import "LMDownloadTask.h"
 #import "LMDownLoadModel.h"
+#import "NSString+md5.h"
 
 #define IS_IOS8ORLATER ([[[UIDevice currentDevice] systemVersion] floatValue] >= 8)
 
@@ -16,7 +17,7 @@ NSString * const BackGroundConfigure = @"com.LMDownloadSessionManager.background
 @interface LMDownloadTask ()
 // 文件管理
 @property (nonatomic, strong) NSFileManager *fileManager;
-// 下载
+// 下载路径
 @property (nonatomic, strong) NSString *downloadDirectory;
 
 // 下载seesion会话
@@ -79,9 +80,153 @@ NSString * const BackGroundConfigure = @"com.LMDownloadSessionManager.background
     return downloadModel;
 
 }
-- (void)startWithDownloadModel:(LMDownloadModel *)downloadModel progress:(LMDownloadProgressBlock)progress state:(LMDownloadStateBlock)state {
+
+- (void)startWithDownloadModel:(LMDownloadModel *)downloadModel progress:(LMDownloadProgressBlock)progress state:(LMDownloadStateBlock)state
+{
+    NSLog(@"%s", __func__);
+    downloadModel.progressBlock = progress;
+    downloadModel.stateBlock = state;
     
+    [self startWithDownloadModel:downloadModel];
 }
+
+- (void)startWithDownloadModel:(LMDownloadModel *)downloadModel
+{
+    NSLog(@"%s", __func__);
+    if (!downloadModel) {
+        return;
+    }
+    
+    if (downloadModel.state == LMDownloadOperationReadyState) {
+        [self downloadModel:downloadModel didChangeState:LMDownloadOperationReadyState filePath:nil error:nil];
+        return;
+    }
+    
+    // 验证是否存在
+    if (downloadModel.task && downloadModel.task.state == NSURLSessionTaskStateRunning) {
+        downloadModel.state = LMDownloadOperationExecutingState;
+        [self downloadModel:downloadModel didChangeState:LMDownloadOperationExecutingState filePath:nil error:nil];
+        return;
+    }
+    
+    // 后台下载设置
+    [self configirebackgroundSessionTasksWithDownloadModel:downloadModel];
+    
+    [self resumeWithDownloadModel:downloadModel];
+}
+
+// 恢复下载
+- (void)resumeWithDownloadModel:(LMDownloadModel *)downloadModel
+{
+    NSLog(@"%s", __func__);
+    if (!downloadModel) {
+        return;
+    }
+    
+    if (![self canResumeDownlaodModel:downloadModel]) {
+        return;
+    }
+    
+    // 如果task 不存在 或者 取消了
+    if (!downloadModel.task || downloadModel.task.state == NSURLSessionTaskStateCanceling) {
+        
+        NSData *resumeData = [self resumeDataFromFileWithDownloadModel:downloadModel];
+        
+        if ([self isValideResumeData:resumeData]) {
+            downloadModel.task = [self.session downloadTaskWithResumeData:resumeData];
+        }else {
+            NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:downloadModel.downloadURL]];
+            downloadModel.task = [self.session downloadTaskWithRequest:request];
+        }
+        downloadModel.task.taskDescription = downloadModel.downloadURL;
+    }
+    
+    if (![self.downloadingModelDic objectForKey:downloadModel.downloadURL]) {
+        self.downloadingModelDic[downloadModel.downloadURL] = downloadModel;
+    }
+    
+    [downloadModel.task resume];
+    
+    downloadModel.state = LMDownloadOperationExecutingState;
+    [self downloadModel:downloadModel didChangeState:LMDownloadOperationExecutingState filePath:nil error:nil];
+}
+
+// 暂停下载
+- (void)suspendWithDownloadModel:(LMDownloadModel *)downloadModel
+{
+    if (!downloadModel.manualCancle) {
+        downloadModel.manualCancle = YES;
+        [self cancleWithDownloadModel:downloadModel clearResumeData:NO];
+    }
+}
+
+// 取消下载 是否删除resumeData
+- (void)cancleWithDownloadModel:(LMDownloadModel *)downloadModel clearResumeData:(BOOL)clearResumeData
+{
+    if (!downloadModel.task && downloadModel.state == LMDownloadOperationReadyState) {
+        [self removeDownLoadingModelForURLString:downloadModel.downloadURL];
+        @synchronized (self) {
+            [self.waitingDownloadModels removeObject:downloadModel];
+        }
+        downloadModel.state = LMDonwloadOperationUnknown;
+        [self downloadModel:downloadModel didChangeState:LMDonwloadOperationUnknown filePath:nil error:nil];
+        return;
+    }
+    if (clearResumeData) {
+        downloadModel.resumeData = nil;
+        [downloadModel.task cancel];
+    }else {
+        [(NSURLSessionDownloadTask *)downloadModel.task cancelByProducingResumeData:^(NSData *resumeData){
+        }];
+    }
+}
+
+#pragma mark - configire background task
+
+// 配置后台后台下载session
+- (void)configirebackgroundSessionTasksWithDownloadModel:(LMDownloadModel *)downloadModel
+{
+    if (!_backgroundConfigure) {
+        return ;
+    }
+    
+    NSURLSessionDownloadTask *task = [self backgroundSessionTasksWithDownloadModel:downloadModel];
+    if (!task) {
+        return;
+    }
+    
+    downloadModel.task = task;
+    if (task.state == NSURLSessionTaskStateRunning) {
+        [task suspend];
+    }
+}
+
+- (NSURLSessionDownloadTask *)backgroundSessionTasksWithDownloadModel:(LMDownloadModel *)downloadModel
+{
+    NSArray *tasks = [self sessionDownloadTasks];
+    for (NSURLSessionDownloadTask *task in tasks) {
+        if (task.state == NSURLSessionTaskStateRunning || task.state == NSURLSessionTaskStateSuspended) {
+            if ([downloadModel.downloadURL isEqualToString:task.taskDescription]) {
+                return task;
+            }
+        }
+    }
+    return nil;
+}
+
+// 获取所以的后台下载session
+- (NSArray *)sessionDownloadTasks
+{
+    __block NSArray *tasks = nil;
+    dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
+    [self.session getTasksWithCompletionHandler:^(NSArray *dataTasks, NSArray *uploadTasks, NSArray *downloadTasks) {
+        tasks = downloadTasks;
+        dispatch_semaphore_signal(semaphore);
+    }];
+    dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER);
+    return tasks;
+}
+
 
 #pragma public
 // 获取正在下载模型
@@ -126,7 +271,7 @@ NSString * const BackGroundConfigure = @"com.LMDownloadSessionManager.background
 - (NSString *)downloadDirectory
 {
     if (!_downloadDirectory) {
-        _downloadDirectory = [[NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES) lastObject] stringByAppendingPathComponent:@"DownloadCache"];
+        _downloadDirectory = [[NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES) lastObject] stringByAppendingPathComponent:@"newdownload"];
         [self createDirectory:_downloadDirectory];
     }
     return _downloadDirectory;
@@ -217,11 +362,84 @@ NSString * const BackGroundConfigure = @"com.LMDownloadSessionManager.background
     }
 }
 
+// 从下载队列中删除model
+- (void)removeDownLoadingModelForURLString:(NSString *)URLString
+{
+    [self.downloadingModelDic removeObjectForKey:URLString];
+}
+
+// 获取resumeData
+- (NSData *)resumeDataFromFileWithDownloadModel:(LMDownloadModel *)downloadModel
+{
+    if (downloadModel.resumeData) {
+        return downloadModel.resumeData;
+    }
+    NSString *resumeDataPath = [self resumeDataPathWithDownloadURL:downloadModel.downloadURL];
+    
+    if ([_fileManager fileExistsAtPath:resumeDataPath]) {
+        NSData *resumeData = [NSData dataWithContentsOfFile:resumeDataPath];
+        return resumeData;
+    }
+    return nil;
+}
+
+// resumeData 路径
+- (NSString *)resumeDataPathWithDownloadURL:(NSString *)downloadURL
+{
+    NSString *resumeFileName = [NSString md5:downloadURL];
+    return [self.downloadDirectory stringByAppendingPathComponent:resumeFileName];
+}
+
+// 用于保存下载可以恢复下载
+- (void)willResumeNextWithDowloadModel:(LMDownloadModel *)downloadModel
+{
+    @synchronized (self) {
+        [self.downloadingModels removeObject:downloadModel];
+        // 还有未下载的
+        if (self.waitingDownloadModels.count > 0) {
+            [self resumeWithDownloadModel:self.waitingDownloadModels.firstObject];
+        }
+    }
+}
+
+// 检验是否可以恢复下载
+- (BOOL)canResumeDownlaodModel:(LMDownloadModel *)downloadModel
+{
+    @synchronized (self) {
+        if (self.downloadingModels.count >= _maxDownloadCount ) {
+            if ([self.waitingDownloadModels indexOfObject:downloadModel] == NSNotFound) {
+                [self.waitingDownloadModels addObject:downloadModel];
+                self.downloadingModelDic[downloadModel.downloadURL] = downloadModel;
+            }
+            downloadModel.state = LMDownloadOperationReadyState;
+            [self downloadModel:downloadModel didChangeState:LMDownloadOperationReadyState filePath:nil error:nil];
+            return NO;
+        }
+        
+        if ([self.waitingDownloadModels indexOfObject:downloadModel] != NSNotFound) {
+            [self.waitingDownloadModels removeObject:downloadModel];
+        }
+        
+        if ([self.downloadingModels indexOfObject:downloadModel] == NSNotFound) {
+            [self.downloadingModels addObject:downloadModel];
+        }
+        return YES;
+    }
+}
+/** 检查url是否可用*/
+- (BOOL)isValideResumeData:(NSData *)resumeData
+{
+    if (!resumeData || resumeData.length == 0) {
+        return NO;
+    }
+    return YES;
+}
+
 #pragma -mark NSURLSessionDownloadDelegate
 
 /**
  *  NSURLSessionDownloadDelegate委托协议
- *  下载完成调用
+ *  下载完毕就会调用一次这个方法
  *
  *  @param session      session
  *  @param downloadTask sessiontask
@@ -229,7 +447,84 @@ NSString * const BackGroundConfigure = @"com.LMDownloadSessionManager.background
  */
 - (void)URLSession:(NSURLSession *)session downloadTask:(NSURLSessionDownloadTask *)downloadTask
 didFinishDownloadingToURL:(NSURL *)location {
+    NSLog(@"%s", __func__);
+    LMDownloadModel *downloadModel = [self downLoadingModelForURLString:downloadTask.taskDescription];
+    if (!downloadModel) return;
     
+    if (location) {
+        // 移动文件到下载目录
+        [self createDirectory:downloadModel.downloadDirectory];
+        [self moveFileAtURL:location toPath:downloadModel.filePath];
+    }
+
+    
+}
+/**
+ * NSURLSessionDownloadDelegate委托协议
+ *  非正常下载完成时调用，用来做离线下载
+ *  @param session session
+ *  @param task    task
+ *  @param error   错误信息，有可能没有
+ */
+- (void)URLSession:(NSURLSession *)session task:(NSURLSessionTask *)task
+didCompleteWithError:(nullable NSError *)error {
+    
+    NSLog(@"%s", __func__);
+    LMDownloadModel *downloadModel = [self downLoadingModelForURLString:task.taskDescription];
+    
+    if (!downloadModel) {
+        NSData *resumeData = error ? [error.userInfo objectForKey:NSURLSessionDownloadTaskResumeData]:nil;
+        if (resumeData) {
+            [self createDirectory:_downloadDirectory];
+            [resumeData writeToFile:[self resumeDataPathWithDownloadURL:task.taskDescription] atomically:YES];
+        }else {
+            [self deleteFileIfExist:[self resumeDataPathWithDownloadURL:task.taskDescription]];
+        }
+        return;
+    }
+    
+    NSData *resumeData = nil;
+    if (error) {
+        resumeData = [error.userInfo objectForKey:NSURLSessionDownloadTaskResumeData];
+    }
+    // 缓存resumeData
+    if (resumeData) {
+        downloadModel.resumeData = resumeData;
+        [self createDirectory:_downloadDirectory];
+        [downloadModel.resumeData writeToFile:[self resumeDataPathWithDownloadURL:downloadModel.downloadURL] atomically:YES];
+    }else {
+        downloadModel.resumeData = nil;
+        [self deleteFileIfExist:[self resumeDataPathWithDownloadURL:downloadModel.downloadURL]];
+    }
+    
+    downloadModel.progress.resumeBytesWritten = 0;
+    downloadModel.task = nil;
+    [self removeDownLoadingModelForURLString:downloadModel.downloadURL];
+    
+    if (downloadModel.manualCancle) {
+        // 手动取消，当做暂停
+        dispatch_async(dispatch_get_main_queue(), ^(){
+            downloadModel.manualCancle = NO;
+            downloadModel.state = LMDownloadOperationPausedState;
+            [self downloadModel:downloadModel didChangeState:LMDownloadOperationPausedState filePath:nil error:nil];
+            [self willResumeNextWithDowloadModel:downloadModel];
+        });
+    }else if (error){
+        // 下载失败
+        dispatch_async(dispatch_get_main_queue(), ^(){
+            downloadModel.state = LMDownloadOperationErrorState;
+            [self downloadModel:downloadModel didChangeState:LMDownloadOperationErrorState filePath:nil error:error];
+            [self willResumeNextWithDowloadModel:downloadModel];
+        });
+    }else {
+        // 下载完成
+        dispatch_async(dispatch_get_main_queue(), ^(){
+            downloadModel.state = LMDownloadOperationFinishedState;
+            [self downloadModel:downloadModel didChangeState:LMDownloadOperationFinishedState filePath:downloadModel.filePath error:nil];
+            [self willResumeNextWithDowloadModel:downloadModel];
+        });
+    }
+
 }
 
 /**
@@ -245,6 +540,8 @@ didFinishDownloadingToURL:(NSURL *)location {
       didWriteData:(int64_t)bytesWritten
  totalBytesWritten:(int64_t)totalBytesWritten
 totalBytesExpectedToWrite:(int64_t)totalBytesExpectedToWrite {
+    NSLog(@"%s", __func__);
+    
     LMDownloadModel *downloadModel = [self downLoadingModelForURLString:downloadTask.taskDescription];
     
     if (!downloadModel || downloadModel.state == LMDownloadOperationPausedState) {
@@ -274,7 +571,7 @@ totalBytesExpectedToWrite:(int64_t)totalBytesExpectedToWrite {
 - (void)URLSession:(NSURLSession *)session downloadTask:(NSURLSessionDownloadTask *)downloadTask
  didResumeAtOffset:(int64_t)fileOffset
 expectedTotalBytes:(int64_t)expectedTotalBytes {
-    
+    NSLog(@"%s", __func__);
     LMDownloadModel *downloadModel = [self downLoadingModelForURLString:downloadTask.taskDescription];
     
     if (!downloadModel || downloadModel.state == LMDownloadOperationPausedState) {

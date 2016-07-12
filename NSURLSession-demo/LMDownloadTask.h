@@ -8,6 +8,8 @@
 
 #import <UIKit/UIKit.h>
 #import "LMDownLoadModel.h"
+#import "LMDownloadDelegate.h"
+
 @class LMDownloadModel;
 
 @interface LMDownloadTask : NSObject <NSURLSessionDownloadDelegate>
@@ -19,12 +21,22 @@
 @property (nonatomic, assign) NSInteger maxDownloadCount;
 /** 后台session configure */
 @property (nonatomic, strong) NSString *backgroundConfigure;
+/** delegate*/
+@property (nonatomic,weak) id<LMDownloadDelegate> delegate;
 
 // 单例
 + (LMDownloadTask *)shareDonwLoadTask;
 
 // 开始下载
 - (LMDownloadModel *)startDownloadURLString:(NSString *)URLString toDestinationPath:(NSString *)destinationPath progress:(LMDownloadProgressBlock)progress state:(LMDownloadStateBlock)state;
-
+- (void)startWithDownloadModel:(LMDownloadModel *)downloadModel;
 - (void)startWithDownloadModel:(LMDownloadModel *)downloadModel progress:(LMDownloadProgressBlock)progress state:(LMDownloadStateBlock)state;
+
+// 恢复下载
+- (void)resumeWithDownloadModel:(LMDownloadModel *)downloadModel;
+
+// 暂停下载
+- (void)suspendWithDownloadModel:(LMDownloadModel *)downloadModel;
+// 获取下载模型
+- (LMDownloadModel *)downLoadingModelForURLString:(NSString *)URLString;
 @end
