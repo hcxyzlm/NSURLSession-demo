@@ -8,7 +8,7 @@
 
 #import "LMDownLoadModel.h"
 
-@implementation LMDownLoadModel
+@implementation LMDownloadModel
 
 - (instancetype)initWithURLString:(NSString *)URLString
 {

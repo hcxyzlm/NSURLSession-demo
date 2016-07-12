@@ -32,6 +32,7 @@
 		AE8928BB1D338E95009ABD22 /* LMDownLoadModel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LMDownLoadModel.m; sourceTree = "<group>"; };
 		AE8928BD1D3396DA009ABD22 /* LMDownloadTask.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LMDownloadTask.h; sourceTree = "<group>"; };
 		AE8928BE1D3396DA009ABD22 /* LMDownloadTask.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LMDownloadTask.m; sourceTree = "<group>"; };
+		AE8928C01D33A085009ABD22 /* LMDownloadDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LMDownloadDelegate.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -89,6 +90,7 @@
 		AE8928B81D338CA8009ABD22 /* DownLoad */ = {
 			isa = PBXGroup;
 			children = (
+				AE8928C01D33A085009ABD22 /* LMDownloadDelegate.h */,
 				AE8928BA1D338E95009ABD22 /* LMDownLoadModel.h */,
 				AE8928BB1D338E95009ABD22 /* LMDownLoadModel.m */,
 				AE8928BD1D3396DA009ABD22 /* LMDownloadTask.h */,

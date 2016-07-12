@@ -17,7 +17,17 @@ typedef NS_ENUM(NSInteger, LMDownloadOperationState){
     LMDownloadOperationErrorState       = 5     // 下载失败
 };
 
-@interface LMDownLoadModel : NSObject
+@class LMDownloadProgress;
+@class LMDownloadState;
+@class LMDownloadProgress;
+// 进度更新block
+typedef void (^LMDownloadProgressBlock)(LMDownloadProgress *progress);
+// 状态更新block
+typedef void (^LMDownloadStateBlock)(LMDownloadOperationState state,NSString *filePath, NSError *error);
+
+
+// 下载模型类
+@interface LMDownloadModel : NSObject
 /** 下载地址RUL*/
 @property (nonatomic, strong, readonly) NSString *downloadURL;
 /** 文件名*/
@@ -28,10 +38,13 @@ typedef NS_ENUM(NSInteger, LMDownloadOperationState){
 @property (nonatomic, assign) LMDownloadOperationState state;
 /** 下载任务 */
 @property (nonatomic, strong) NSURLSessionTask *task;
-/** 文件流 */
-@property (nonatomic, strong) NSOutputStream *stream;
 /** 下载路径 */
 @property (nonatomic, strong) NSString *filePath;
+/** 进度*/
+@property (nonatomic, strong) LMDownloadProgress *progress;
+// block
+@property (nonatomic, weak) LMDownloadProgressBlock progressBlock;
+@property (nonatomic, weak) LMDownloadStateBlock stateBlock;
 
 /**
  *  初始化方法
@@ -46,4 +59,21 @@ typedef NS_ENUM(NSInteger, LMDownloadOperationState){
  *  @param filePath  缓存地址 当为nil 默认缓存到cache
  */
 - (instancetype)initWithURLString:(NSString *)URLString filePath:(NSString *)filePath;
+@end
+
+
+// 下载进度类
+@interface LMDownloadProgress: NSObject
+/** 续传大小 */
+@property (nonatomic, assign) int64_t resumeBytesWritten;
+/** 这次写入的数量 */
+@property (nonatomic, assign) int64_t bytesWritten;
+/** 已下载的数量 */
+@property (nonatomic, assign) int64_t totalBytesWritten;
+/** 文件的总大小 */
+@property (nonatomic, assign) int64_t totalBytesExpectedToWrite;
+/** 下载的进度*/
+@property (nonatomic, assign) float progress;
+
+
 @end
