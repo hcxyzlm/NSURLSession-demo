@@ -13,10 +13,6 @@
 @class LMDownloadModel;
 
 @interface LMDownloadTask : NSObject <NSURLSessionDownloadDelegate>
-/** 下载中的模型 只读*/
-@property (nonatomic, strong,readonly) NSMutableArray *waitingDownloadModels;
-/** 等待中的模型 只读*/
-@property (nonatomic, strong,readonly) NSMutableArray *downloadingModels;
 /** 最大下载数 */
 @property (nonatomic, assign) NSInteger maxDownloadCount;
 /** 后台session configure */

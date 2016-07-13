@@ -42,6 +42,7 @@ static NSString * const downloadUrl = @"http://dlsw.baidu.com/sw-search-sp/soft/
     __weak typeof(self) weakSelf = self;
     [manager startWithDownloadModel:_downloadModel progress:^(LMDownloadProgress *progress) {
         weakSelf.progressView.progress = progress.progress;
+        weakSelf.progressLabel.text = [NSString stringWithFormat:@"progress %.2f",weakSelf.progressView.progress];
         
     } state:^(LMDownloadOperationState state, NSString *filePath, NSError *error) {
         if (state == LMDownloadOperationFinishedState) {
